@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+. "$(dirname "$0")/_/husky.sh"
+
+# Snapshot before pushing to remote
+bash ./scripts/precommit_snapshot.sh "Auto snapshot: pre-push"
+
+exit 0

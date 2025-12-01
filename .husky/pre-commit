@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+. "$(dirname "$0")/_/husky.sh"
+
+# Run pre-commit snapshot
+bash ./scripts/precommit_snapshot.sh "Auto snapshot: pre-commit"
+
+exit 0
