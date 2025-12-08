@@ -13,7 +13,21 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 function getBrandLogoUrl(brandName: string): string {
   const cleanName = brandName.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return `https://logo.clearbit.com/${cleanName}.com`;
+  
+  // Brand domain mapping
+  const domainMap: Record<string, string> = {
+    'adidas': 'adidas.com',
+    'nike': 'nike.com',
+    'amazon': 'amazon.com',
+    'apple': 'apple.com',
+    'samsung': 'samsung.com',
+    'walmart': 'walmart.com',
+    'target': 'target.com',
+    'bestbuy': 'bestbuy.com',
+  };
+  
+  const domain = domainMap[cleanName] || `${cleanName}.com`;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 }
 
 function getFutureDate(daysFromNow: number): string {
@@ -31,9 +45,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { query, location, city, category } = await req.json();
+    const { query, location, city, category, suggestOnly } = await req.json();
 
-    console.log('AI Scraper called with:', { query, location, city, category });
+    console.log('AI Scraper called with:', { query, location, city, category, suggestOnly });
 
     const { data: apiKeyData, error: keyError } = await supabase
       .from('admin_settings')
@@ -45,6 +59,7 @@ Deno.serve(async (req: Request) => {
       console.log('No OpenAI API key configured');
       return new Response(JSON.stringify({
         deals: [],
+        suggestions: [],
         message: "AI scraping requires OpenAI API key. Configure it in Admin Settings.",
         fallback: true
       }), {
@@ -56,6 +71,63 @@ Deno.serve(async (req: Request) => {
     const today = new Date().toISOString().split('T')[0];
     const minValidDate = getFutureDate(7); // At least 7 days valid
 
+    if (suggestOnly) {
+      // Suggestion mode: ask OpenAI for brand name suggestions only
+      const suggestionPrompt = `lookmon internet to suggest brand names. Use the user input keywords to find the closest match and revert in JSON. User input: "${query}". Return ONLY a JSON array (no markdown, no explanation) of up to 10 brand names that are the closest match to the user input.`;
+
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: 'You are a brand name suggestion assistant. Only respond with a JSON array of brand names.' },
+            { role: 'user', content: suggestionPrompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 200,
+        }),
+      });
+
+      if (!openaiResponse.ok) {
+        const errorText = await openaiResponse.text();
+        console.error('OpenAI API error (suggestions):', errorText);
+        return new Response(JSON.stringify({
+          suggestions: [],
+          message: `OpenAI API error: ${openaiResponse.statusText}`,
+          fallback: true
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const aiResult = await openaiResponse.json();
+      let suggestions: string[] = [];
+      try {
+        const content = aiResult.choices[0]?.message?.content || '[]';
+        const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        suggestions = JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error('Failed to parse AI suggestions:', parseError);
+        suggestions = [];
+      }
+      // Fallback: always include the query itself if suggestions are empty
+      if (!Array.isArray(suggestions) || suggestions.length === 0) {
+        suggestions = [query];
+      }
+      return new Response(JSON.stringify({
+        suggestions,
+        message: suggestions.length > 0 ? `Found ${suggestions.length} brand suggestions` : 'No suggestions found',
+        fallback: false
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Normal search mode: deals
     const searchPrompt = `You are a deal finder assistant. Find the LATEST, CURRENTLY ACTIVE LOCAL deals for "${query}" in ${city || location}, ${location}.
 
 CRITICAL REQUIREMENTS:
@@ -173,6 +245,7 @@ IMPORTANT: Every deal must have valid_until date in the FUTURE (after ${today}).
     return new Response(
       JSON.stringify({ 
         deals: [], 
+        suggestions: [],
         error: error.message,
         fallback: true 
       }),

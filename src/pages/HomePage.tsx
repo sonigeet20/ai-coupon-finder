@@ -12,13 +12,12 @@ export const HomePage = ({ onNavigate }: HomePageProps) => {
   const categories = ['all', 'Food', 'Fashion', 'Electronics', 'Travel', 'Health', 'Entertainment'];
 
   const handleSearch = () => {
-    if (searchTerm.trim()) {
-      onNavigate('search', searchTerm, selectedCategory);
-    }
+    onNavigate('search', searchTerm, selectedCategory);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleSearch();
     }
   };
@@ -51,10 +50,10 @@ export const HomePage = ({ onNavigate }: HomePageProps) => {
               </div>
               <input
                 type="text"
-                placeholder="Search brands, deals, categories..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
+                placeholder="Search brands, deals, categories..."
                 className="w-full pl-11 pr-4 py-4 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-xl glass transition-all"
               />
             </div>
@@ -71,7 +70,7 @@ export const HomePage = ({ onNavigate }: HomePageProps) => {
             </select>
             <button
               onClick={handleSearch}
-              className="px-8 py-4 bg-white text-purple-600 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-xl hover:scale-105"
+              className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-xl transition-all"
             >
               Search
             </button>

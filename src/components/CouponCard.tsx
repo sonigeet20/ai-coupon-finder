@@ -31,6 +31,7 @@ export const CouponCard = ({ coupon, userId }: CouponCardProps) => {
   const [isSaved, setIsSaved] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   const handleSave = async () => {
     if (!userId) return;
@@ -119,12 +120,13 @@ export const CouponCard = ({ coupon, userId }: CouponCardProps) => {
         </div>
 
         <div className="flex items-start gap-4 mb-4">
-          {coupon.brand_logo_url ? (
+          {coupon.brand_logo_url && !logoError ? (
             <div className="w-16 h-16 flex-shrink-0 bg-white rounded-xl shadow-md p-2 border border-gray-100">
               <img
                 src={coupon.brand_logo_url}
                 alt={coupon.brand_name}
                 className="w-full h-full object-contain"
+                onError={() => setLogoError(true)}
               />
             </div>
           ) : (

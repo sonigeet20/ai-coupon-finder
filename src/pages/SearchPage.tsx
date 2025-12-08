@@ -37,15 +37,20 @@ export const SearchPage = ({ initialSearch = '', initialCategory = 'all' }: Sear
   const categories = ['all', 'Food', 'Fashion', 'Electronics', 'Travel', 'Health', 'Entertainment'];
 
   useEffect(() => {
-    if (searchTerm && useAiSearch) {
-      const timeoutId = setTimeout(() => {
-        performAiSearch();
-      }, 1000);
-      return () => clearTimeout(timeoutId);
+    // If there's an initial search term, trigger AI search automatically
+    if (initialSearch && initialSearch.trim()) {
+      performAiSearch();
     } else {
       fetchCoupons();
     }
-  }, [location, searchTerm, selectedCategory, useAiSearch]);
+  }, [location, selectedCategory]);
+
+  useEffect(() => {
+    // Trigger AI search when initialSearch changes
+    if (initialSearch && initialSearch.trim()) {
+      performAiSearch();
+    }
+  }, [initialSearch]);
 
   const performAiSearch = async () => {
     try {
@@ -128,10 +133,55 @@ export const SearchPage = ({ initialSearch = '', initialCategory = 'all' }: Sear
       console.log(`Fetched ${data?.length || 0} coupons from database`);
       console.log('User location:', location?.country);
 
-      return data || [];
+      // Fetch logos for brands that don't have them
+      const couponsWithLogos = await Promise.all((data || []).map(async (coupon) => {
+        if (!coupon.brand_logo_url) {
+          const logoUrl = await fetchAndCacheBrandLogo(coupon.brand_name, coupon.id);
+          return { ...coupon, brand_logo_url: logoUrl };
+        }
+        return coupon;
+      }));
+
+      return couponsWithLogos;
     } catch (error) {
       console.error('Error fetching database coupons:', error);
       return [];
+    }
+  };
+
+  const fetchAndCacheBrandLogo = async (brandName: string, couponId?: string): Promise<string | null> => {
+    try {
+      const cleanName = brandName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      // Brand domain mapping for better accuracy
+      const domainMap: Record<string, string> = {
+        'adidas': 'adidas.com',
+        'nike': 'nike.com',
+        'amazon': 'amazon.com',
+        'apple': 'apple.com',
+        'samsung': 'samsung.com',
+        'walmart': 'walmart.com',
+        'target': 'target.com',
+        'bestbuy': 'bestbuy.com',
+      };
+      
+      const domain = domainMap[cleanName] || `${cleanName}.com`;
+      
+      // Try Google Favicon service (most reliable and not geo-blocked)
+      const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      
+      // Cache the logo URL in the database for this brand
+      await supabase
+        .from('coupons')
+        .update({ brand_logo_url: logoUrl })
+        .eq('brand_name', brandName)
+        .is('brand_logo_url', null);
+      
+      console.log(`✓ Cached logo for ${brandName}: ${logoUrl}`);
+      return logoUrl;
+    } catch (error) {
+      console.error(`Error fetching logo for ${brandName}:`, error);
+      return null;
     }
   };
 
@@ -189,6 +239,21 @@ export const SearchPage = ({ initialSearch = '', initialCategory = 'all' }: Sear
     }
   };
 
+  const handleSearch = () => {
+    if (searchTerm && useAiSearch) {
+      performAiSearch();
+    } else {
+      fetchCoupons();
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
   const filteredCoupons = coupons.filter((coupon) => {
     const matchesSearch =
       searchTerm === '' ||
@@ -219,6 +284,7 @@ export const SearchPage = ({ initialSearch = '', initialCategory = 'all' }: Sear
                 placeholder="Search brands, deals, categories..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleKeyPress}
                 className="w-full pl-11 pr-4 py-4 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-xl glass transition-all"
               />
             </div>
@@ -233,6 +299,23 @@ export const SearchPage = ({ initialSearch = '', initialCategory = 'all' }: Sear
                 </option>
               ))}
             </select>
+            <button
+              onClick={handleSearch}
+              disabled={loading}
+              className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Searching
+                </span>
+              ) : (
+                'Search'
+              )}
+            </button>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">

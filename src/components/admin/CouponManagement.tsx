@@ -19,6 +19,8 @@ interface CouponFormData {
 export const CouponManagement = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [fetchingLogos, setFetchingLogos] = useState(false);
+  const [logoFetchResults, setLogoFetchResults] = useState<string>('');
   const [formData, setFormData] = useState<CouponFormData>({
     brand_name: '',
     title: '',
@@ -93,9 +95,120 @@ export const CouponManagement = () => {
     });
   };
 
+  const fetchAllBrandLogos = async () => {
+    setFetchingLogos(true);
+    setLogoFetchResults('Fetching logos for all brands...');
+
+    try {
+      // Get all unique brands without logos
+      const { data: coupons, error } = await supabase
+        .from('coupons')
+        .select('brand_name, brand_logo_url')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      const uniqueBrands = [...new Set(coupons?.map(c => c.brand_name) || [])];
+      const brandsNeedingLogos = uniqueBrands.filter(brand => {
+        const coupon = coupons?.find(c => c.brand_name === brand);
+        return !coupon?.brand_logo_url;
+      });
+
+      setLogoFetchResults(`Found ${brandsNeedingLogos.length} brands without logos. Processing...`);
+
+      let updated = 0;
+      let notFound = 0;
+
+      for (const brand of brandsNeedingLogos) {
+        const logoUrl = await getBrandLogoUrl(brand);
+        
+        if (logoUrl) {
+          const { error: updateError } = await supabase
+            .from('coupons')
+            .update({ brand_logo_url: logoUrl })
+            .eq('brand_name', brand)
+            .is('brand_logo_url', null);
+
+          if (!updateError) {
+            updated++;
+          }
+        } else {
+          notFound++;
+        }
+
+        setLogoFetchResults(
+          `Processing ${brand}...\n` +
+          `Updated: ${updated} | Not found: ${notFound} | Remaining: ${brandsNeedingLogos.length - updated - notFound}`
+        );
+
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      setLogoFetchResults(
+        `✓ Completed!\n` +
+        `Successfully updated: ${updated} brands\n` +
+        `No logos found: ${notFound} brands\n` +
+        `Total processed: ${brandsNeedingLogos.length}`
+      );
+    } catch (error: any) {
+      setLogoFetchResults(`Error: ${error.message}`);
+    } finally {
+      setFetchingLogos(false);
+    }
+  };
+
+  const getBrandLogoUrl = async (brandName: string): Promise<string | null> => {
+    const cleanName = brandName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    // Try multiple services
+    const services = [
+      `https://logo.clearbit.com/${cleanName}.com`,
+      `https://www.google.com/s2/favicons?domain=${cleanName}.com&sz=128`,
+      `https://icons.duckduckgo.com/ip3/${cleanName}.com.ico`,
+    ];
+
+    for (const url of services) {
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        if (response.ok) {
+          return url;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    return null;
+  };
+
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Coupon</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Create New Coupon</h2>
+        <button
+          onClick={fetchAllBrandLogos}
+          disabled={fetchingLogos}
+          className="px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {fetchingLogos ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Fetching Logos...
+            </span>
+          ) : (
+            '🎨 Auto-Fetch All Brand Logos'
+          )}
+        </button>
+      </div>
+
+      {logoFetchResults && (
+        <div className="mb-6 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 whitespace-pre-line">
+          {logoFetchResults}
+        </div>
+      )}
 
       {message && (
         <div
