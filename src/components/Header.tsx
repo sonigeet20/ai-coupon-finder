@@ -38,14 +38,14 @@ export const Header = ({ onNavigate, currentPage }: HeaderProps) => {
               Home
             </button>
             <button
-              onClick={() => onNavigate('brands')}
+              onClick={() => onNavigate('search')}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                currentPage === 'brands'
+                currentPage === 'search'
                   ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Brands
+              Search
             </button>
             <button
               onClick={() => onNavigate('blog')}

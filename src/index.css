@@ -27,22 +27,3 @@
     @apply bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl;
   }
 }
-
-/* Toast helper */
-.toast-enter {
-  opacity: 0;
-  transform: translateY(8px);
-}
-.toast-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 150ms ease, transform 150ms ease;
-}
-.toast-exit {
-  opacity: 1;
-}
-.toast-exit-active {
-  opacity: 0;
-  transition: opacity 120ms ease;
-}
-

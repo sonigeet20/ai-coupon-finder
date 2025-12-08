@@ -1,0 +1,28 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://deno.land/x/dotenv/mod.ts": "https://deno.land/x/dotenv@v3.2.2/mod.ts"
+  },
+  "remote": {
+    "https://deno.land/x/dotenv@v3.2.2/mod.ts": "077b48773de9205266a0b44c3c3a3c3083449ed64bb0b6cc461b95720678d38e",
+    "https://deno.land/x/dotenv@v3.2.2/util.ts": "693730877b13f8ead2b79b2aa31e2a0652862f7dc0c5f6d2f313f4d39c7b7670"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@supabase/supabase-js@^2.39.3",
+        "npm:@types/react-dom@^18.3.0",
+        "npm:@types/react@^18.3.3",
+        "npm:@vitejs/plugin-react@^4.3.1",
+        "npm:autoprefixer@^10.4.19",
+        "npm:husky@^8.0.3",
+        "npm:postcss@^8.4.38",
+        "npm:react-dom@^18.3.1",
+        "npm:react@^18.3.1",
+        "npm:tailwindcss@^3.4.3",
+        "npm:typescript@^5.5.3",
+        "npm:vite@^5.4.8"
+      ]
+    }
+  }
+}
