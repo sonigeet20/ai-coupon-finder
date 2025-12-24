@@ -24,10 +24,15 @@ function getBrandLogoUrl(brandName: string): string {
     'walmart': 'walmart.com',
     'target': 'target.com',
     'bestbuy': 'bestbuy.com',
+    'starbucks': 'starbucks.com',
+    'mcdonalds': 'mcdonalds.com',
+    'costco': 'costco.com',
+    'kroger': 'kroger.com',
+    'carrefour': 'carrefour.com',
   };
   
   const domain = domainMap[cleanName] || `${cleanName}.com`;
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  return `https://img.logo.dev/${domain}?size=128&fallback=404`;
 }
 
 function getFutureDate(daysFromNow: number): string {

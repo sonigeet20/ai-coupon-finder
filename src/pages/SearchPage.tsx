@@ -163,12 +163,17 @@ export const SearchPage = ({ initialSearch = '', initialCategory = 'all' }: Sear
         'walmart': 'walmart.com',
         'target': 'target.com',
         'bestbuy': 'bestbuy.com',
+        'starbucks': 'starbucks.com',
+        'mcdonalds': 'mcdonalds.com',
+        'costco': 'costco.com',
+        'kroger': 'kroger.com',
+        'carrefour': 'carrefour.com',
       };
       
       const domain = domainMap[cleanName] || `${cleanName}.com`;
-      
-      // Try Google Favicon service (most reliable and not geo-blocked)
-      const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+
+      // Prefer logo.dev CDN (fast, handles SVG/PNG). Fallback to Google favicon automatically via &fallback.
+      const logoUrl = `https://img.logo.dev/${domain}?size=128&fallback=404`;
       
       // Cache the logo URL in the database for this brand
       await supabase
